@@ -1,0 +1,288 @@
+---
+title: "SpatialMaps"
+author: "Patience Bosompemaa"
+date: "2024-08-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(patchwork)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+county_shp <- st_read("C:/Users/p739b253/Documents/USA_Counties/USA_Counties.shp")
+county_data <- read_csv("C:/Users/p739b253/OneDrive - University of Kansas/FEWtures/Manuscript2/spatial_map_2025a.csv")
+colnames(county_data) <- c("county", "FIPS", "R2" ,"slope", "I", "Qred", "pumping", "chng", "Qav", "precip")
+county_shp$FIPS <- as.numeric((county_shp$FIPS)) 
+shp_with_data <- left_join(county_shp, county_data, by="FIPS")
+shp_CARB <- subset(shp_with_data, is.finite(slope))
+ggplot(shp_CARB, aes(fill = slope, color = STATE_NAME))+geom_sf()
+
+#Orginal plot
+ggplot(shp_CARB, aes(fill = slope, color = STATE_NAME))+geom_sf()
+
+```
+
+```{r}
+#Add CARB outline
+carb_shapefile <- st_read("C:/Users/p739b253/OneDrive - University of Kansas/FEWtures/CARB files_Patience/CARB_Watershed_Final/CARB_Watershed_Final.shp")
+
+#Spatial plots for metrics
+x_expression <- expression(R^2)
+A1 <- ggplot(shp_CARB, aes(fill = R2))+geom_sf()+
+  labs(subtitle = "", fill=x_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+
+A1
+
+y_expression <- expression(Slope)
+B1 <- ggplot(shp_CARB, aes(fill = slope))+geom_sf()+
+  labs(subtitle = "", fill=y_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+
+B1
+```
+
+```{r}
+#x1_expression <- expression(Qs)
+#x1_expression <- expression(atop(Qstable, atop(("10^6 m^3"))))
+x1_expression <- expression(atop(I, paste("(", 10^6, " ", m^3, ")")))
+#x1_expression <- expression(Qs ~ (10^6~ m^3))
+#x1_expression <- expression(Qstable ~ atop("", paste("(", 10^6, m^3, ")")))
+C1 <- ggplot(shp_CARB, aes(fill = I))+geom_sf()+
+  labs(subtitle = "", fill=x1_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+
+C1
+```
+
+```{r}
+#x1_expression <- expression(Qs)
+#x1_expression <- expression(atop(Qstable, atop(("10^6 m^3"))))
+#x1_expression <- expression(atop(Pumping, paste("(", 10^6, " ", m^3, ")")))
+x1_expression <- expression(atop(Qav/A, paste("(", "mm", ")")))
+#x1_expression <- expression(Qstable ~ atop("", paste("(", 10^6, m^3, ")")))
+C2 <- ggplot(shp_CARB, aes(fill = Qav))+geom_sf()+
+  labs(subtitle = "", fill=x1_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+
+C2
+```
+
+```{r}
+#x1_expression <- expression(Qs)
+#x1_expression <- expression(atop(Qstable, atop(("10^6 m^3"))))
+#x1_expression <- expression(atop(Pumping, paste("(", 10^6, " ", m^3, ")")))
+x1_expression <- expression(atop(GWLC, paste("(", "m", ")")))
+#x1_expression <- expression(Qstable ~ atop("", paste("(", 10^6, m^3, ")")))
+C3 <- ggplot(shp_CARB, aes(fill = chng))+geom_sf()+
+  labs(subtitle = "", fill=x1_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+
+C3
+```
+
+
+```{r}
+#x1_expression <- expression(Qs)
+#x1_expression <- expression(atop(Qstable, atop(("10^6 m^3"))))
+#x1_expression <- expression(atop(Pumping, paste("(", 10^6, " ", m^3, ")")))
+x1_expression <- expression(atop(Precip, paste("(", "m", ")")))
+#x1_expression <- expression(Qstable ~ atop("", paste("(", 10^6, m^3, ")")))
+C4 <- ggplot(shp_CARB, aes(fill = precip))+geom_sf()+
+  labs(subtitle = "", fill=x1_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+
+C4
+```
+
+
+
+
+```{r}
+#x2_expression <- expression(atop(Pumping, atop(reduction, "(%)", 0.8)))
+x1_expression <- expression(atop(Qred, paste("(", "%", ")")))
+D1 <- ggplot(shp_CARB, aes(fill = Qred))+geom_sf()+
+  labs(subtitle = "", fill=x1_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+
+D1
+```
+
+```{r}
+library(ggpubr)
+#figure <- ggarrange(A1, C2, B1, D1, C1,
+#                    labels = c("(a)", "(d)", "(b)", "(e)", "(c)"),
+#                    ncol = 2, nrow = 3, common.legend = FALSE)
+
+#figure <- ggarrange(A1, C1, B1, D1,
+ #                   labels = c("(a)", "(d)", "(b)", "(e)", "(c)"),
+#                    ncol = 2, nrow = 3, common.legend = FALSE)
+#figure
+```
+
+
+
+
+```{r}
+#m<- plot_grid(A1,C2 ,B1, D1,C1, ncol = 2)
+#m
+```
+
+#Perfect arrangement
+```{r}
+m2<- (A1/C1)
+m2
+m1<- (A1|B1)/(C1|D1)
+m1
+
+figure <- ggarrange(C2, C3, C4,
+                    #labels = c("(e)", "(f)", "(g)"),
+                    #font.label = list(face = "plain"),
+                    ncol = 2, nrow = 2, common.legend = FALSE)
+figure
+#copy and paste image, if save gives gaps between them
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "2025n1.jpeg", plot = m1, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "2025n2.jpeg", plot = figure, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+#Histogram fo key parameters
+```{r}
+x_expression <- expression(R^2)
+#title <- Histogram
+a<- ggplot(county_data, aes(x = r2)) +       # Modify color around bars
+  geom_histogram(col = "black", binwidth = 0.12, fill="white")+
+  labs(x=x_expression, y="Frequency", title="Histogram", size=8)+
+   #(color = "red", size = 1)+
+    geom_vline(aes(xintercept=mean(r2, na.rm=T)), 
+               color="darkgray", linetype="dashed", size=1)+
+  theme_classic()
+a<- a + theme(text = element_text(size = 18))  
+a
+
+x_expression <- expression(Slope)
+#title <- Histogram~of~Slope
+b<- ggplot(county_data, aes(x = slope)) +       # Modify color around bars
+  geom_histogram(col = "black", binwidth = 4, fill="white")+
+  labs(x=x_expression, y="Frequency")+
+  geom_vline(aes(xintercept=mean(slope, na.rm=T)), 
+               color="darkgray", linetype="dashed", size=1)+
+  theme_classic() 
+b<- b + theme(text = element_text(size = 18))
+b
+
+
+x_expression <- expression(Qstable ~ (10^6~ m^3))
+#title <- Histogram~of~Qstable
+c<- ggplot(county_data, aes(x = Qstable)) +     # Modify color around bars
+  geom_histogram(col = "black", binwidth = 0.055, fill="white")+
+  labs(x=x_expression, y="Frequency")+
+  geom_vline(aes(xintercept=mean(Qstable, na.rm=T)), 
+               color="darkgray", linetype="dashed", size=1)+
+  theme_classic() 
+c<- c + theme(text = element_text(size = 18))  
+c
+
+
+hist<- a|b|c
+hist
+```
+```{r}
+# Save the plot
+ggsave(filename = "hist.png", plot = hist, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+min(county_data$Qstable)
+max(county_data$Qstable)
+mean(county_data$Qstable)
+```
+
+```{r}
+county_shp <- st_read("C:/Users/p739b253/Documents/USA_Counties/USA_Counties.shp")
+county_data <- read_csv("C:/Users/p739b253/OneDrive - University of Kansas/FEWtures/Manuscript2/Dakota.csv")
+colnames(county_data) <- c("county", "FIPS", "Dakota_pumping")
+county_shp$FIPS <- as.numeric((county_shp$FIPS)) 
+shp_with_data <- left_join(county_shp, county_data, by="FIPS")
+shp_CARB <- subset(shp_with_data, is.finite(Dakota_pumping))
+ggplot(shp_CARB, aes(fill = Dakota_pumping, color = STATE_NAME))+geom_sf()
+
+#Orginal plot
+ggplot(shp_CARB, aes(fill = Dakota_pumping, color = STATE_NAME))+geom_sf()
+
+```
+```{r}
+y_expression <- expression(Fraction~Dakota~pumping)
+B2 <- ggplot(shp_CARB, aes(fill = Dakota_pumping))+geom_sf()+
+  labs(subtitle = "", fill=y_expression)+
+  theme_classic()+
+  theme(
+    legend.title = element_text(size = 16),  # Increase the font size of the legend title
+    legend.text = element_text(size = 14)    # Increase the font size of the legend labels
+  )
+B2
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "DK2.jpeg", plot = B2, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

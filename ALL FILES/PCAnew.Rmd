@@ -1,0 +1,234 @@
+---
+title: "PCA2"
+author: "Patience Bosompemaa"
+date: "2024-09-12"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+#Principal Component Analysis (PCA)
+```{r}
+library(sf)
+library(ggplot2)
+library(zoo)
+library(dplyr)
+library(magrittr)
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+library(ggpubr)
+library(metan)
+library(FactoMineR)
+library(factoextra)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+pc <- read_csv("C:/Users/p739b253/OneDrive - University of Kansas/FEWtures/Manuscript2/Corr_data1new.csv")
+names(pc)
+```
+
+```{r}
+dim(PCA) # to see the dimension of the data ie. the number of rows and columns in the dataset
+corr_coef(pc[1:21]) #to make a matrix of correlation between the variables which are continuous in nature
+```
+```{r}
+r<- pc[, 2:21]
+r
+```
+
+
+```{r}
+a<- corr_coef(r)
+a <- plot(a)
+a
+```
+
+
+
+```{r}
+# Save the plot
+ggsave(filename = "Correla1.png", plot = a, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+#Histogram fo key parameters
+```{r}
+x_expression <- expression(R^2)
+#title <- Histogram~of~R^2
+a<- ggplot(pc, aes(x = R2)) +       # Modify color around bars
+  geom_histogram(col = "black", fill="white")+
+  labs(x=x_expression, y="Frequency", size=8)+
+   #(color = "red", size = 1)+
+    geom_vline(aes(xintercept=mean(R2, na.rm=T)), 
+               color="blue", linetype="dashed", size=0.5)+
+  theme_classic()
+a<- a + theme(text = element_text(size = 12))  
+a
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "hist_r2.png", plot = a, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Slope ~(10^-6~ m^-2))
+#title <- Histogram~of~Slope
+b<- ggplot(pc, aes(x = Slope)) +       # Modify color around bars
+  geom_histogram(col = "black", fill="white")+
+  labs(x=x_expression, y="Frequency", size=8)+
+  geom_vline(aes(xintercept=mean(Slope, na.rm=T)), 
+               color="blue", linetype="dashed", size=0.5)+
+  theme_classic() 
+b<- b + theme(text = element_text(size = 12))
+b
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "hist_slope.png", plot = b, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(I ~(10^6~ m^3))
+#title <- Histogram~of~I
+c<- ggplot(pc, aes(x = I)) +     # Modify color around bars
+  geom_histogram(col = "black", fill="white")+
+  labs(x=x_expression, y="Frequency")+
+  geom_vline(aes(xintercept=mean(I, na.rm=T)), 
+               color="blue", linetype="dashed", size=0.5)+
+  theme_classic() 
+c<- c + theme(text = element_text(size = 12))  
+c
+```
+
+``` {r}
+x_expression <- expression(Qred ~ "(%)")
+#title <- Histogram~of~Qstable
+d<- ggplot(pc, aes(x = Qred)) +     # Modify color around bars
+  geom_histogram(col = "black", fill="white")+
+  labs(x=x_expression, y="Frequency")+
+  geom_vline(aes(xintercept=mean(Qred, na.rm=T)), 
+               color="blue", linetype="dashed", size=0.5)+
+  theme_classic() 
+d<- d + theme(text = element_text(size = 12))  
+d
+```
+
+```{r}
+#hist<- (a|b)/(c|d)
+hist<- a|b|c|d
+hist
+```
+
+
+
+```{r}
+# Save the plot
+ggsave(filename = "hist_ALL.png", plot = hist, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+```{r}
+
+ggplot(pc, aes(x = Slope), fill="white") +          # Modify color around bars
+  geom_histogram(col = "red")+
+  theme_classic() 
+
+ggplot(pc, aes(x = I), fill="white") +          # Modify color around bars
+  geom_histogram(col = "red")+
+  theme_classic() 
+```
+
+
+
+
+
+
+
+
+
+
+########### CHECKING FOR NON-NUMERIC IN DATA, AND NA's
+
+
+```{r}
+str(a)  # Check the structure of the result
+```
+```{r}
+sapply(r, class)
+r[] <- lapply(r, function(x) if(is.factor(x) || is.character(x)) as.numeric(as.factor(x)) else x)
+```
+
+```{r}
+colSums(is.na(r))
+```
+```{r}
+r <- na.omit(r)  # Remove rows with missing values
+# OR use pairwise correlation calculation:
+a <- cor(r, use = "pairwise.complete.obs")
+```
+
+```{r}
+r <- r[, sapply(r, function(x) length(unique(x)) > 1)]
+```
+
+```{r}
+library(corrplot)
+corrplot(a, method = "color")
+
+#install.packages("ggcorrplot")
+library(ggcorrplot)
+ggcorrplot(a)
+```
+
+
+
+
+
+
+```{r}
+a <- a<- corr_coef(r)
+plot(a)
+```
+
+```{r}
+plot(a)
+```
+
+
+
+```{r}
+# Convert factors to numeric if necessary
+pc$AAA <- as.numeric(as.character(pc$AAA))
+pc$DNdensity <- as.numeric(as.character(pc$DNdensity))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

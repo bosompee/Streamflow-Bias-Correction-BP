@@ -1,0 +1,1676 @@
+---
+title: "Manuscript2_raw"
+author: "Patience Bosompemaa"
+date: "2024-07-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(ggplot2)
+library(zoo)
+library(dplyr)
+library(magrittr)
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+library(ggpubr)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+setwd("C:/Users/p739b253/OneDrive - University of Kansas/FEWtures/Manuscript2/exported shapefiles for R")
+
+#counties <- st_read("gmd_3_5_data_counties.shp")
+#gwl <- st_read("gmd_3_5_data_GWL.shp")
+gwl <- read.csv("gmd_3_5_data_updated_GWL.csv")
+use <- read.csv("use_updated.csv")
+Precip <- read.csv("precip_updated.csv")
+names(Precip)
+```
+
+```{r}
+############################# DATA FILTERING ###########################
+#creating a new column with FIPS code replacement
+precip <- Precip %>%
+  mutate(COUNTY_COD = case_when (
+    Precip$CO_ABRV ==  "SW"~175,
+    Precip$CO_ABRV ==  "SV"~189,
+    Precip$CO_ABRV ==  "MT"~129,
+    Precip$CO_ABRV ==  "ME"~119,
+    Precip$CO_ABRV ==  "KW"~97,
+    Precip$CO_ABRV ==  "HS"~81,
+    Precip$CO_ABRV ==  "GT"~67,
+    Precip$CO_ABRV ==  "ST"~187,
+    Precip$CO_ABRV ==  "PR"~151,
+    Precip$CO_ABRV ==  "GY"~69,
+    Precip$CO_ABRV ==  "ED"~47,
+    Precip$CO_ABRV ==  "RN"~155,
+    Precip$CO_ABRV ==  "SF"~185,
+    Precip$CO_ABRV ==  "FI"~55,
+    Precip$CO_ABRV ==  "KE"~93,
+    Precip$CO_ABRV ==  "HM"~75,
+    Precip$CO_ABRV ==  "PN"~145,
+    Precip$CO_ABRV ==  "RC"~159,
+    Precip$CO_ABRV ==  "BT"~9,
+    Precip$CO_ABRV ==  "MT"~129,
+    Precip$CO_ABRV ==  "FO"~57
+  ))
+#Precip$CO_ABRV 
+
+precip <- precip[c("Year", "COUNTY_COD", "CO_ABRV", "MEAN")]
+
+use <- use %>%
+  mutate(COUNTY_COD = case_when (
+    use$county_abrev ==  "SW"~175,
+    use$county_abrev ==  "SV"~189,
+    use$county_abrev ==  "MT"~129,
+    use$county_abrev ==  "ME"~119,
+    use$county_abrev ==  "KW"~97,
+    use$county_abrev ==  "HS"~81,
+    use$county_abrev ==  "GT"~67,
+    use$county_abrev ==  "ST"~187,
+    use$county_abrev ==  "PR"~151,
+    use$county_abrev ==  "GY"~69,
+    use$county_abrev ==  "ED"~47,
+    use$county_abrev ==  "RN"~155,
+    use$county_abrev ==  "SF"~185,
+    use$county_abrev ==  "FI"~55,
+    use$county_abrev ==  "KE"~93,
+    use$county_abrev ==  "HM"~75,
+    use$county_abrev ==  "PN"~145,
+    use$county_abrev ==  "RC"~159,
+    use$county_abrev ==  "BT"~9,
+    use$county_abrev ==  "MT"~129,
+    use$county_abrev ==  "FO"~57
+  ))
+
+#names(use) #list of column names
+
+################## Extracting the data i need from the main dataframe #########################################
+```
+
+```{r}
+#names(gwl)
+```
+
+Water level change
+```{r}
+####### CHANGE IN WATER LEVEL DATA #########################
+gwl <- gwl[ ,c("COUNTY_CODE", "chng_2010_2011", "chng_2011_2012",
+               "chng_2012_2013", "chng_2013_2014", "chng_2014_2015", "chng_2015_2016", "chng_2016_2017",
+               "chng_2017_2018", "chng_2018_2019", "chng_2019_2020", "chng_2020_2021", "chng_2021_2022", "chng_2022_2023", "chng_2023_2024")]
+
+#names(gwl)
+```
+
+
+```{r}
+# Change colnames of all columns
+colnames(gwl) <- c("COUNTY_COD", "2010",
+                      "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023")
+
+#transform
+gwl1 <- gwl %>% pivot_longer(cols=c("2010",
+                      "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019",
+                      "2020", "2021", "2022", "2023"),
+                                  names_to='year',
+                                  values_to='chng')
+```
+
+
+```{r}
+gwl1$geometry <- NULL # deleting "geometry" column
+
+#creating a new column with FIPS code replacement
+gwl <- gwl1 %>%
+  mutate(COUNTY_NAME = case_when (
+    gwl1$COUNTY_COD ==  175~"Seward",
+    gwl1$COUNTY_COD ==  189~"Stevens",
+    gwl1$COUNTY_COD ==  119~"Meade",
+    gwl1$COUNTY_COD ==  97~"Kiowa",
+    gwl1$COUNTY_COD ==  81~"Haskell",
+    gwl1$COUNTY_COD ==  67~"Grant",
+    gwl1$COUNTY_COD ==  187~"Stanton",
+    gwl1$COUNTY_COD ==  151~"Pratt",
+    gwl1$COUNTY_COD ==  69~"Gray",
+    gwl1$COUNTY_COD ==  47~"Edwards",
+    gwl1$COUNTY_COD ==  155~"Reno",
+    gwl1$COUNTY_COD ==  185~"Stafford",
+    gwl1$COUNTY_COD ==  55~"Finney",
+    gwl1$COUNTY_COD ==  93~"Kearny",
+    gwl1$COUNTY_COD ==  75~"Hamilton",
+    gwl1$COUNTY_COD ==  145~"Pawnee",
+    gwl1$COUNTY_COD ==  159~"Rice",
+    gwl1$COUNTY_COD ==  9~"Barton",
+    gwl1$COUNTY_COD ==  129~"Morton",
+    gwl1$COUNTY_COD ==  57~"Ford"
+  ))
+
+#ggplot(gwl, aes(x= year, y= chng))+
+#  geom_boxplot()+
+#  facet_wrap(~COUNTY_NAME)
+
+#Filter data for the specific county
+gwl_seward<- subset(gwl, COUNTY_NAME == "Seward")
+gwl_stevens<- subset(gwl, COUNTY_NAME == "Stevens")
+gwl_meade<- subset(gwl, COUNTY_NAME == "Meade")
+gwl_kiowa<- subset(gwl, COUNTY_NAME == "Kiowa")
+gwl_haskell<- subset(gwl, COUNTY_NAME == "Haskell")
+gwl_grant<- subset(gwl, COUNTY_NAME == "Grant")
+gwl_stanton<- subset(gwl, COUNTY_NAME == "Stanton")
+gwl_pratt<- subset(gwl, COUNTY_NAME == "Pratt")
+gwl_ford<- subset(gwl, COUNTY_NAME == "Ford")
+gwl_gray<- subset(gwl, COUNTY_NAME == "Gray")
+gwl_edwards<- subset(gwl, COUNTY_NAME == "Edwards")
+gwl_reno<- subset(gwl, COUNTY_NAME == "Reno")
+gwl_stafford<- subset(gwl, COUNTY_NAME == "Stafford")
+gwl_finney<- subset(gwl, COUNTY_NAME == "Finney")
+gwl_kearny<- subset(gwl, COUNTY_NAME == "Kearny")
+gwl_hamilton<- subset(gwl, COUNTY_NAME == "Hamilton")
+gwl_pawnee<- subset(gwl, COUNTY_NAME == "Pawnee")
+gwl_rice<- subset(gwl, COUNTY_NAME == "Rice")
+gwl_morton<- subset(gwl, COUNTY_NAME == "Morton")
+gwl_barton<- subset(gwl, COUNTY_NAME == "Barton")
+
+#remove rows from data frame with NA values in column 'chng'
+gwl_seward<- gwl_seward[!is.na(gwl_seward$chng),]
+gwl_stevens<- gwl_stevens[!is.na(gwl_stevens$chng),]
+gwl_meade<- gwl_meade[!is.na(gwl_meade$chng),]
+gwl_kiowa<- gwl_kiowa[!is.na(gwl_kiowa$chng),]
+gwl_haskell<- gwl_haskell[!is.na(gwl_haskell$chng),]
+gwl_grant<- gwl_grant[!is.na(gwl_grant$chng),]
+gwl_stanton<- gwl_stanton[!is.na(gwl_stanton$chng),]
+gwl_pratt<- gwl_pratt[!is.na(gwl_pratt$chng),]
+gwl_ford<- gwl_ford[!is.na(gwl_ford$chng),]
+gwl_gray<- gwl_gray[!is.na(gwl_gray$chng),]
+gwl_edwards<- gwl_edwards[!is.na(gwl_edwards$chng),]
+gwl_reno<- gwl_reno[!is.na(gwl_reno$chng),]
+gwl_stafford<- gwl_stafford[!is.na(gwl_stafford$chng),]
+gwl_finney<- gwl_finney[!is.na(gwl_finney$chng),]
+gwl_kearny<- gwl_kearny[!is.na(gwl_kearny$chng),]
+gwl_hamilton<- gwl_hamilton[!is.na(gwl_hamilton$chng),]
+gwl_pawnee<- gwl_pawnee[!is.na(gwl_pawnee$chng),]
+gwl_rice<- gwl_rice[!is.na(gwl_rice$chng),]
+gwl_morton<- gwl_morton[!is.na(gwl_morton$chng),]
+gwl_barton<- gwl_barton[!is.na(gwl_barton$chng),]
+```
+
+```{r}
+#Using boxplot to check the existence of outliers
+#Boxplot for each counties to identify outliers for change in gwl
+p1 <- ggplot(gwl_seward, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Seward", x = "Year", y = "Change in water level (ft)")
+
+p2 <- ggplot(gwl_stevens, aes(x= year, y= chng))+
+  geom_boxplot()
+p2 + labs(title= "Stevens", x = "Year", y = "Change in water level (ft)")
+
+p3 <- ggplot(gwl_meade, aes(x= year, y= chng))+
+  geom_boxplot()
+p3 + labs(title= "Meade", x = "Year", y = "Change in water level (ft)")
+
+p4 <- ggplot(gwl_kiowa, aes(x= year, y= chng))+
+  geom_boxplot()
+p4 + labs(title= "Kiowa", x = "Year", y = "Change in water level (ft)")
+
+p5 <- ggplot(gwl_haskell, aes(x= year, y= chng))+
+  geom_boxplot()
+p5 + labs(title= "Haskell", x = "Year", y = "Change in water level (ft)")
+
+p6 <- ggplot(gwl_grant, aes(x= year, y= chng))+
+  geom_boxplot()
+p6 + labs(title= "Grant", x = "Year", y = "Change in water level (ft)")
+
+p7 <- ggplot(gwl_stanton, aes(x= year, y= chng))+
+  geom_boxplot()
+p7 + labs(title= "Stanton", x = "Year", y = "Change in water level (ft)")
+
+p8 <- ggplot(gwl_pratt, aes(x= year, y= chng))+
+  geom_boxplot()
+p8 + labs(title= "Pratt", x = "Year", y = "Change in water level (ft)")
+
+p9 <- ggplot(gwl_ford, aes(x= year, y= chng))+
+  geom_boxplot()
+p9 + labs(title= "Ford", x = "Year", y = "Change in water level (ft)")
+
+p10 <- ggplot(gwl_gray, aes(x= year, y= chng))+
+  geom_boxplot()
+p10 + labs(title= "Gray", x = "Year", y = "Change in water level (ft)")
+
+p11 <- ggplot(gwl_edwards, aes(x= year, y= chng))+
+  geom_boxplot()
+p11 + labs(title= "Edwards", x = "Year", y = "Change in water level (ft)")
+
+p12 <- ggplot(gwl_reno, aes(x= year, y= chng))+
+  geom_boxplot()
+p12 + labs(title= "Reno", x = "Year", y = "Change in water level (ft)")
+
+p13 <- ggplot(gwl_stafford, aes(x= year, y= chng))+
+  geom_boxplot()
+p13 + labs(title= "Stafford", x = "Year", y = "Change in water level (ft)")
+
+p14 <- ggplot(gwl_kearny, aes(x= year, y= chng))+
+  geom_boxplot()
+p14 + labs(title= "Kearny", x = "Year", y = "Change in water level (ft)")
+
+p15 <- ggplot(gwl_finney, aes(x= year, y= chng))+
+  geom_boxplot()
+p15 + labs(title= "Finney", x = "Year", y = "Change in water level (ft)")
+
+p16 <- ggplot(gwl_hamilton, aes(x= year, y= chng))+
+  geom_boxplot()
+p16 + labs(title= "Hamilton", x = "Year", y = "Change in water level (ft)")
+
+p17 <- ggplot(gwl_pawnee, aes(x= year, y= chng))+
+  geom_boxplot()
+p17 + labs(title= "Pawnee", x = "Year", y = "Change in water level (ft)")
+
+p18 <- ggplot(gwl_rice, aes(x= year, y= chng))+
+  geom_boxplot()
+p18 + labs(title= "Rice", x = "Year", y = "Change in water level (ft)")
+
+p19 <- ggplot(gwl_morton, aes(x= year, y= chng))+
+  geom_boxplot()
+p19 + labs(title= "Morton", x = "Year", y = "Change in water level (ft)")
+
+p20 <- ggplot(gwl_barton, aes(x= year, y= chng))+
+  geom_boxplot()
+p20 + labs(title= "Barton", x = "Year", y = "Change in water level (ft)")
+```
+
+```{r}
+# Function to find and omit outliers
+find_and_omit_outliers <- function(data) {
+  q1 <- quantile(data$chng, 0.25)
+  q3 <- quantile(data$chng, 0.75)
+  iqr <- q3 - q1
+  lower_bound <- q1 - 1.5 * iqr
+  upper_bound <- q3 + 1.5 * iqr
+  outliers <- data$chng[data$chng < lower_bound | data$chng > upper_bound]
+  data_without_outliers <- data[data$chng >= lower_bound & data$chng <= upper_bound, ]
+  return(data_without_outliers)
+}
+```
+
+Seward
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_seward, gwl_seward$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Seward", x = "Year", y = "Change in water level (ft)")
+
+# converting year to a factor for grouping
+outliers_combined$year <- as.factor(outliers_combined$year)
+
+#Mean
+outliers_combined_SW <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+```{r}
+library(writexl)
+
+write_xlsx(point_counts, 'C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\Exported_files_excel\\data_SWo.xlsx')
+write_xlsx(point_counts1, "C:/Users/p739b253/OneDrive - University of Kansas/FEWtures/Manuscript2/Exported_files_excel/dataSW.xlsx")
+```
+
+stevens
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_stevens, gwl_stevens$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Stevens", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_SV <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Meade
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_meade, gwl_meade$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Meade", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_ME <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Kiowa
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_kiowa, gwl_kiowa$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Kiowa", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_KW <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Haskell
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_haskell, gwl_haskell$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Haskell", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_HS <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Grant
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_grant, gwl_grant$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Grant", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_GT <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Stanton
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_stanton, gwl_stanton$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outliers
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Stanton", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_ST <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Pratt
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_pratt, gwl_pratt$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outliers
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Pratt", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_PR <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Ford
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_ford, gwl_ford$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outliers
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Ford", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_FO <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Gray
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_gray, gwl_gray$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outliers
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Gray", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_GY <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Edwards
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_edwards, gwl_edwards$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Gray", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_ED <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))# Count the number of points for each year for each county
+```
+
+Reno
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_reno, gwl_reno$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Reno", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_RN <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Stafford
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_stafford, gwl_stafford$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Stafford", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_SF <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Finney
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_finney, gwl_finney$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Finney", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_FI <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Kearny
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_kearny, gwl_kearny$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Kearny", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_KE <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Hamilton
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_hamilton, gwl_hamilton$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Hamilton", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_HM <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+Pawnee
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_pawnee, gwl_pawnee$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Pawnee", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_PN <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Rice
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_rice, gwl_rice$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Rice", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_RC <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Barton
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_barton, gwl_barton$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Barton", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_BT <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+Morton
+```{r}
+# Find and omit outliers for each year
+outliers_dataframes <- lapply(split(gwl_morton, gwl_morton$year), function(data) {
+  find_and_omit_outliers(data)
+})
+
+# Combine results into a single table
+outliers_combined <- do.call(rbind, outliers_dataframes)
+
+# Print the combined table of outliers
+#print(outliers_combined)
+
+#Boxplot without outlies
+p1 <- ggplot(outliers_combined, aes(x= year, y= chng))+
+  geom_boxplot()
+p1 + labs(title= "Morton", x = "Year", y = "Change in water level (ft)")
+
+#Mean
+outliers_combined_MT <-outliers_combined %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarise(chng = mean(chng))
+```
+
+```{r}
+combined_data_gwl <- bind_rows(
+  mutate(outliers_combined_SW),
+  mutate(outliers_combined_SV),
+  mutate(outliers_combined_MT),
+  mutate(outliers_combined_ME),
+  mutate(outliers_combined_KW),
+  mutate(outliers_combined_HS),
+  mutate(outliers_combined_GT),
+  mutate(outliers_combined_ST),
+  mutate(outliers_combined_PR),
+  mutate(outliers_combined_FO),
+  mutate(outliers_combined_GY),
+  mutate(outliers_combined_ED),
+  mutate(outliers_combined_RN),
+  mutate(outliers_combined_SF),
+  mutate(outliers_combined_FI),
+  mutate(outliers_combined_KE),
+  mutate(outliers_combined_HM),
+  mutate(outliers_combined_PN),
+  mutate(outliers_combined_RC),
+  mutate(outliers_combined_BT)
+)
+```
+```{r}
+combined_data_gwl <- bind_rows(
+  mutate(gwl_seward),
+  mutate(gwl_stevens),
+  mutate(gwl_morton),
+  mutate(gwl_meade),
+  mutate(gwl_kiowa),
+  mutate(gwl_haskell),
+  mutate(gwl_grant),
+  mutate(gwl_stanton),
+  mutate(gwl_pratt),
+  mutate(gwl_ford),
+  mutate(gwl_gray),
+  mutate(gwl_edwards),
+  mutate(gwl_reno),
+  mutate(gwl_stafford),
+  mutate(gwl_finney),
+  mutate(gwl_kearny),
+  mutate(gwl_hamilton),
+  mutate(gwl_pawnee),
+  mutate(gwl_rice),
+  mutate(gwl_barton)
+  
+)
+```
+
+```{r}
+# Mean
+combined_data_gwl <- combined_data_gwl %>%
+  group_by(COUNTY_NAME, year) %>%
+  summarize(across(c(chng), list(mean = mean, sd = sd)))
+```
+
+#extracting DEPTH_TO_B and DEPTH_OF_W
+```{r}
+# Mean
+#combined_data_gwl <- combined_data_gwl %>%
+#  group_by(COUNTY_NAME, year) %>%
+#  summarize(across(c(DEPTH_OF_W, chng), list(mean = mean, sd = sd)))
+
+#combined_data_gwl %>%
+#  group_by(COUNTY_NAME, year) %>%
+#  summarize(
+#    across(
+#      c(DEPTH_OF_WELL, DEPTH_TO_B, chng), 
+#      list(mean = ~mean(.), sd = ~sd(.)), 
+#      .names = "{col}_{fn}"
+#    )
+#  )
+```
+
+```{r}
+names(use)
+```
+
+
+WATER USE DATA
+```{r}
+use <- use[ ,c("PDIV_ID", "county_abrev", "COUNTY_COD", "AF_USED_2010", "ACRES_2010", "AF_USED_2011", "ACRES_2011", "AF_USED_2012", "ACRES_2012", "AF_USED_2013","ACRES_2013","AF_USED_2014", "ACRES_2014", "AF_USED_2015", "ACRES_2015", "AF_USED_2016","ACRES_2016", "AF_USED_2017", "ACRES_2017",
+               "AF_USED_2018","ACRES_2018", "AF_USED_2019", "ACRES_2019", "AF_USED_2020", "ACRES_2020", "AF_USED_2021", "ACRES_2021", "AF_USED_2022", "ACRES_2022", "AF_USED_2023", "ACRES_2023")]
+
+#Identifying Outliers in water use data
+#To avoid the influence of outliers, wells are excluded that reported irrigation on
+#less than 40 acres (Obembe et al 2023)
+```
+
+
+```{r}
+#pivot the data frame into a long format
+use_long <-
+  use %>% pivot_longer(cols=c("AF_USED_2010", "ACRES_2010", "AF_USED_2011", "ACRES_2011", "AF_USED_2012", "ACRES_2012", "AF_USED_2013","ACRES_2013","AF_USED_2014", "ACRES_2014", "AF_USED_2015", "ACRES_2015", "AF_USED_2016","ACRES_2016", "AF_USED_2017", "ACRES_2017",
+               "AF_USED_2018","ACRES_2018", "AF_USED_2019", "ACRES_2019", "AF_USED_2020", "ACRES_2020", "AF_USED_2021", "ACRES_2021", "AF_USED_2022", "ACRES_2022", "AF_USED_2023", "ACRES_2023"),
+                    names_to='variable',
+                    values_to='points') %>% 
+  mutate(year = str_sub(variable, start = -4, end = -1),
+         variable_noyr = str_sub(variable, start = 1, end = -6)) %>% 
+  dplyr::select(-variable) %>% 
+  pivot_wider(id_cols = c("county_abrev", "COUNTY_COD", "year", "PDIV_ID"),
+              names_from = "variable_noyr", values_from = "points") %>% 
+  mutate(irrigation_ft = AF_USED/ACRES,
+         irrigation_mm = irrigation_ft*12*25.4) %>%
+  subset(ACRES > 0)
+```
+
+# Remove rows with NA values in columns A, B, and C
+```{r}
+use_long <- use_long[complete.cases(use_long[, c("irrigation_ft", "irrigation_mm")]), ]
+```
+
+```{r}
+# Mean
+outliers_combined_use <- use_long %>%
+  group_by(county_abrev, year) %>%
+  summarize(across(c(ACRES, irrigation_mm), list(mean = mean, sd = sd)))
+```
+
+#Precip data
+```{r}
+#creating a new column with FIPS code replacement
+precip <- precip %>%
+  mutate(COUNTY_NAME = case_when (
+    precip$COUNTY_COD ==  175~"Seward",
+    precip$COUNTY_COD ==  189~"Stevens",
+    precip$COUNTY_COD ==  119~"Meade",
+    precip$COUNTY_COD ==  97~"Kiowa",
+    precip$COUNTY_COD ==  81~"Haskell",
+    precip$COUNTY_COD ==  67~"Grant",
+    precip$COUNTY_COD ==  187~"Stanton",
+    precip$COUNTY_COD ==  151~"Pratt",
+    precip$COUNTY_COD ==  69~"Gray",
+    precip$COUNTY_COD ==  47~"Edwards",
+    precip$COUNTY_COD ==  155~"Reno",
+    precip$COUNTY_COD ==  185~"Stafford",
+    precip$COUNTY_COD ==  55~"Finney",
+    precip$COUNTY_COD ==  93~"Kearny",
+    precip$COUNTY_COD ==  75~"Hamilton",
+    precip$COUNTY_COD ==  145~"Pawnee",
+    precip$COUNTY_COD ==  159~"Rice",
+    precip$COUNTY_COD ==  9~"Barton",
+    precip$COUNTY_COD ==  129~"Morton",
+    precip$COUNTY_COD ==  57~"Ford"
+  ))
+
+## converting year to a factor for grouping
+precip$Year <- as.factor(precip$Year)
+
+precip <- precip %>%
+  group_by(COUNTY_NAME, Year) %>%
+  summarise(precip = mean(MEAN))  # just cross checking the mean, precip data already in annual mean
+```
+
+
+```{r}
+# Assuming gwl_seward is your dataframe
+outliers_combined_use <- outliers_combined_use %>%
+  mutate(COUNTY_NAME = case_when(
+    county_abrev == "SW" ~ "Seward",
+    county_abrev == "SV" ~ "Stevens",
+    county_abrev == "MT" ~ "Morton",
+    county_abrev == "ME" ~ "Meade",
+    county_abrev == "KW" ~ "Kiowa",
+    county_abrev == "HS" ~ "Haskell",
+    county_abrev == "GT" ~ "Grant",
+    county_abrev == "ST" ~ "Stanton",
+    county_abrev == "PR" ~ "Pratt",
+    county_abrev == "GY" ~ "Gray",
+    county_abrev == "ED" ~ "Edwards",
+    county_abrev == "RN" ~ "Reno",
+    county_abrev == "SF" ~ "Stafford",
+    county_abrev == "FI" ~ "Finney",
+    county_abrev == "KE" ~ "Kearny",
+    county_abrev == "HM" ~ "Hamilton",
+    county_abrev == "PN" ~ "Pawnee",
+    county_abrev == "RC" ~ "Rice",
+    county_abrev == "BT" ~ "Barton",
+    county_abrev == "FO" ~ "Ford",
+    TRUE ~ as.character(county_abrev)  # Keep original if not matched
+  ))
+```
+
+#put all data frames one and renaming columns
+```{r}
+#rename column in position 2 to 'year'
+colnames(precip)[2] <- 'year'
+
+# Merge based on common columns "name" and "year"
+combined_data <- merge(precip, outliers_combined_use, by = c("COUNTY_NAME", "year"))
+
+all<-merge(combined_data_gwl, combined_data, by = c("COUNTY_NAME", "year"))
+
+```
+
+
+########################################################
+#Units conversion to "m"
+```{r}
+# water use/irrigation in mm to m
+all$use_m <- all$irrigation_mm_mean*0.001
+
+# change in water level in ft to "m"
+all$chng_m <- all$chng_mean*0.3048
+
+# precip in mm to "m"
+all$precip_m <- all$precip*0.001
+
+```
+
+```{r}
+library(writexl)
+write_xlsx(all, 'C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\new\\all_DataUsed_for_LR.xlsx')
+```
+
+
+#Filter data for the specific county ONLY
+```{r}
+all_seward<- subset(all, COUNTY_NAME == "Seward")
+all_stevens<- subset(all, COUNTY_NAME == "Stevens")
+all_meade<- subset(all, COUNTY_NAME == "Meade")
+all_kiowa<- subset(all, COUNTY_NAME == "Kiowa")
+all_haskell<- subset(all, COUNTY_NAME == "Haskell")
+all_grant<- subset(all, COUNTY_NAME == "Grant")
+all_stanton<- subset(all, COUNTY_NAME == "Stanton")
+all_pratt<- subset(all, COUNTY_NAME == "Pratt")
+all_ford<- subset(all, COUNTY_NAME == "Ford")
+all_gray<- subset(all, COUNTY_NAME == "Gray")
+all_edwards<- subset(all, COUNTY_NAME == "Edwards")
+all_reno<- subset(all, COUNTY_NAME == "Reno")
+all_stafford<- subset(all, COUNTY_NAME == "Stafford")
+all_finney<- subset(all, COUNTY_NAME == "Finney")
+all_kearny<- subset(all, COUNTY_NAME == "Kearny")
+all_hamliton<- subset(all, COUNTY_NAME == "Hamilton")
+all_pawnee<- subset(all, COUNTY_NAME == "Pawnee")
+all_rice<- subset(all, COUNTY_NAME == "Rice")
+all_morton<- subset(all, COUNTY_NAME == "Morton")
+all_barton<- subset(all, COUNTY_NAME == "Barton")
+```
+
+
+# change in water level vs water use
+##################################################################
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+SW<- ggscatter(all_seward, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.45, label.y = -0.02, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.45, label.y = -0.12, size= 6.5)+
+  ggtitle("Seward")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+library(ggrepel)
+
+SW<- SW+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+SW
+
+  #SW1 <- SW +
+   #geom_text_repel(aes(label=year), size=3.3)
+  #SW1
+```
+
+```{r}
+model <- lm(all_barton$chng_m ~ all_barton$use_m)
+model
+# Get residuals
+residuals <- model$residuals
+
+# Calculate RSS (Residual Sum of Squares (RSS))
+RSS <- sum(residuals^2)
+print(RSS)
+
+# Degrees of freedom
+df <- model$df.residual
+
+# Calculate MSE, df is n−p, where n is the number of observations, and p is the number of parameters (including the intercept)
+MSE <- RSS / df
+print(MSE)
+
+# Calculate Total Sum of Squares (TSS)
+TSS <- sum((all_barton$chng_m - mean(all_barton$chng_m))^2)
+
+# Calculate R-squared
+R_squared <- 1 - (RSS / TSS)
+print(R_squared)
+```
+
+
+```{r}
+# Save the plot
+ggsave(filename = "1SW.png", plot = SW, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+  
+SV<- ggscatter(all_stevens, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.43, label.y = -0.02, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.43, label.y = -0.14, size= 6.5)+
+  ggtitle("Stevens")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ SV<- SV+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+SV
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "2SV.png", plot = SV, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+
+ME<- ggscatter(all_meade, x= "use_m", y= "chng_m", add = "reg.line",
+conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.47, label.y = -0.02, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.47, label.y = -0.12, size= 6.5)+
+  ggtitle("Meade")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ ME<- ME+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+ME
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "3ME.png", plot = ME, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+MT<- ggscatter(all_morton, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.37, label.y = 0.2, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.37, label.y = 0.15, size= 6.5)+
+  ggtitle("Morton")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ MT<- MT+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+MT
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "4MT.png", plot = MT, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+waka <- (SW|SV)/(ME|MT)
+waka
+```
+
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+KW<- ggscatter(all_kiowa, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.39, label.y = 0.2, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.39, label.y = 0.15, size= 6.5)+
+  ggtitle("Kiowa")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ KW<- KW+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+KW
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "5KW.png", plot = KW, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+HS<- ggscatter(all_haskell, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.39, label.y = -0.02, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.39, label.y = -0.16, size= 6.5)+
+  ggtitle("Haskell")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ HS<- HS+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+HS
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "6HS.png", plot = HS, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+GT<- ggscatter(all_grant, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.4, label.y = 0.4, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.4, label.y = 0.24, size= 6.5)+
+  ggtitle("Grant")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ GT<- GT+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+GT
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "7GT.png", plot = GT, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+ST<- ggscatter(all_stanton, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.36, label.y = 0, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.36, label.y = -0.06, size= 6.5)+
+  ggtitle("Stanton")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ ST<- ST+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+ST
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "8ST.png", plot = ST, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+PR<- ggscatter(all_pratt, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.37, label.y = 0.55, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.37, label.y = 0.44, size= 6.5)+
+  ggtitle("Pratt")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ PR<- PR+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+PR
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "9PR.png", plot = PR, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+FO<- ggscatter(all_ford, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.37, label.y = 0.25, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.37, label.y = 0.18, size= 6.5)+
+  ggtitle("Ford")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+FO<- FO+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+FO
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "10FO.png", plot = FO, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+GY<- ggscatter(all_gray, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.39, label.y = -0.02, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.39, label.y = -0.12, size= 6.5)+
+  ggtitle("Gray")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+GY<- GY+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+GY
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "11GY.png", plot = GY, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+ED<- ggscatter(all_edwards, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.35, label.y = 0.55, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.35, label.y = 0.44, size= 6.5)+
+  ggtitle("Edwards")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 14),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 14),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ED<- ED+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+ED
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "12ED.png", plot = ED, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+RN<- ggscatter(all_reno, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.34, label.y = 0.8, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.34, label.y = 0.66, size= 6.5)+
+  ggtitle("Reno")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+RN<- RN+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+RN
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "13RN.png", plot = RN, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+SF<- ggscatter(all_stafford, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.38, label.y = 0.5, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.38, label.y = 0.4, size= 6.5)+
+  ggtitle("Stafford")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+SF<- SF+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+SF
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "14SF.png", plot = SF, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+FI<- ggscatter(all_finney, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.43, label.y = 0, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.43, label.y = -0.12, size= 6.5)+
+  ggtitle("Finney")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+ FI<- FI+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+FI
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "15FI.png", plot = FI, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+KE<- ggscatter(all_kearny, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.46, label.y = 0.8, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.46, label.y = 0.6, size= 6.5)+
+  ggtitle("Kearny")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+KE<- KE+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+KE
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "16KE.png", plot = KE, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+HM<- ggscatter(all_hamliton, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.42, label.y = 0.22, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.42, label.y = 0.18, size= 6.5)+
+  ggtitle("Hamilton")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 17),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 17),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+HM<- HM+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+HM
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "17HM.png", plot = HM, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+PN<- ggscatter(all_pawnee, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.31, label.y = 1.0, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.31, label.y = 0.85, size= 6.5)+
+  ggtitle("Pawnee")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+PN<- PN+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+PN
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "18PN.png", plot = PN, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+RC<- ggscatter(all_rice, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.31, label.y = 0.55, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.31, label.y = 0.43, size= 6.5)+
+  ggtitle("Rice")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+RC<- RC+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+RC
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "19RC.png", plot = RC, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+```{r}
+x_expression <- expression(Annual~mean~water~use~(10^6~ m^3))
+BT<- ggscatter(all_barton, x= "use_m", y= "chng_m", add = "reg.line",
+               conf.int = TRUE, size=4,
+               #label = "year", repel = TRUE,
+               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"))+
+  stat_cor(label.x = 0.3, label.y = 0.5, size=6.5, #change the y value for rescaling
+           aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")))+
+  stat_regline_equation(label.x = 0.3, label.y = 0.4, size= 6.5)+
+  ggtitle("Barton")+labs(x=x_expression,
+                             y="Annual mean change in water level (m)")+
+  theme(
+    axis.title.x = element_text(size = 22), # Increase x-axis label font size
+    axis.title.y = element_text(size = 22), # Increase y-axis label font size
+    axis.text.x = element_text(size = 22),  # Increase x-axis tick labels font size
+    axis.text.y = element_text(size = 22),  # Increase y-axis tick labels font size
+    #legend.text = element_text(size = 12),  # Increase legend text font size (if applicable)
+    plot.title = element_text(size = 25)    # Increase plot title font size
+  )
+
+BT<- BT+ geom_text_repel(aes(label = year), size = 7)  # Adjust size for year labels
+BT
+```
+
+```{r}
+# Save the plot
+ggsave(filename = "20BTup.png", plot = BT, path = "C:\\Users\\p739b253\\OneDrive - University of Kansas\\FEWtures\\Manuscript2\\IMAGES\\LR_KS")
+```
+
+
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
